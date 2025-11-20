@@ -6,21 +6,21 @@ const dotenv = require("dotenv");
 const Groq = require("groq-sdk");
 const cors = require("cors");
 
-
 dotenv.config();
 
 const app = express();
+app.use(cors());
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 app.use(express.json());
 app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
-app.use(cors());
+
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname); // keep .m4a, .mp3, .webm etc.
     cb(null, Date.now() + ext);
-  }
+  },
 });
 
 // only allow supported audio formats
@@ -28,8 +28,16 @@ const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const allowed = [
-      ".flac", ".mp3", ".mp4", ".mpeg", ".mpga", ".m4a",
-      ".ogg", ".opus", ".wav", ".webm"
+      ".flac",
+      ".mp3",
+      ".mp4",
+      ".mpeg",
+      ".mpga",
+      ".m4a",
+      ".ogg",
+      ".opus",
+      ".wav",
+      ".webm",
     ];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowed.includes(ext)) {
@@ -37,10 +45,8 @@ const upload = multer({
     } else {
       cb(new Error("Unsupported file type. Upload audio only."));
     }
-  }
+  },
 });
-
-
 
 const systemPrompt = `
 You are a highly accurate medical scribe AI. Your task is to listen to or read the doctor's voice transcription and extract all relevant prescription information into a structured JSON format.
@@ -59,9 +65,7 @@ The JSON must include the following fields:
 
 Always respond in **valid JSON only**, without additional text, explanations, or commentary. If any field is missing in the transcription, leave it as an empty string or empty array.
 Be precise, consistent, and professional.
-`
-
-
+`;
 
 // 🎯 Main API route
 app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
@@ -80,7 +84,7 @@ app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
     });
 
     const text = transcription.text;
-            const prompt = `
+    const prompt = `
         You are a medical scribe assistant. Extract a prescription from the doctor's spoken note below.generate a prescription in valid JSON format.describe the prescription in a clear and concise manner.you expect the doctor to provide all necessary details for a complete prescription.suggest medications,dose,frequency if not mentioned explicitly based on the diagnosis provided.
         Return ONLY valid JSON matching this schema:
         {
@@ -110,16 +114,15 @@ app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
       messages: [
         {
           role: "system",
-          content:
-            systemPrompt
+          content: systemPrompt,
         },
         {
           role: "user",
-          content: prompt
-        }
+          content: prompt,
+        },
       ],
       temperature: 0.2,
-      response_format: { type: "json_object" } // ✅ Correct for Groq
+      response_format: { type: "json_object" }, // ✅ Correct for Groq
     });
 
     const prescription = JSON.parse(chatResponse.choices[0].message.content);
@@ -130,7 +133,7 @@ app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
 
     res.json({
       transcription: text,
-      prescription
+      prescription,
     });
   } catch (err) {
     console.error("❌ Error:", err);
@@ -138,5 +141,6 @@ app.post("/api/transcribe", upload.single("audio"), async (req, res) => {
   }
 });
 
-
-app.listen(3000, () => console.log("🚀 Server running at http://localhost:3000"));
+app.listen(3000, () =>
+  console.log("🚀 Server running at http://localhost:3000")
+);
