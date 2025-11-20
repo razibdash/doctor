@@ -60,7 +60,7 @@ export default function PrescriptionRecorder() {
       const fd = new FormData();
       fd.append("audio", blob, "speech.webm");
 
-      const res = await fetch("http://localhost:3000/api/transcribe", {
+      const res = await fetch("https://doctor-cvoe.onrender.com/api/transcribe", {
         method: "POST",
         body: fd,
       });
